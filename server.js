@@ -1,9 +1,9 @@
-const express = require('express');
+const express = require("express");
 const app = express();
-const bodyParser = require('body-parser');
-const bcrypt = require('bcrypt-nodejs');
-const cors = require('cors');
-const knex = require('knex')
+const bodyParser = require("body-parser");
+const bcrypt = require("bcrypt-nodejs");
+const cors = require("cors");
+const knex = require("knex");
 
 const db = knex({
   client: "pg",
@@ -15,80 +15,80 @@ const db = knex({
   }
 });
 
-console.log(db.select('*').from('users'));
+//console.log(db.select('*').from('users'));
 
 const database = {
   users: [
     {
-      id: '123',
-      name: 'John',
-      email: 'john@gmail.com',
-      password: 'cookies',
+      id: "123",
+      name: "John",
+      email: "john@gmail.com",
+      password: "cookies",
       entries: 0,
-      joined: new Date(),
-
+      joined: new Date()
     },
     {
-      id: '125',
-      name: 'Sally',
-      email: 'sally@gmail.com',
-      password: 'bananas',
+      id: "125",
+      name: "Sally",
+      email: "sally@gmail.com",
+      password: "bananas",
       entries: 0,
-      joined: new Date(),
-
+      joined: new Date()
     }
   ],
   login: [
     {
-      id: '987',
-      hash: '',
-      email: 'john@gmail.com'
+      id: "987",
+      hash: "",
+      email: "john@gmail.com"
     }
   ]
-}
+};
 
 app.use(bodyParser.json());
 app.use(cors());
 
-app.get('/', (req,res) => {
+app.get("/", (req, res) => {
   res.json(database.users);
 });
 
-app.post('/signin', (req, res) => {
-  if (req.body.password === database.users[0].password &&
-    req.body.email === database.users[0].email){
+app.post("/signin", (req, res) => {
+  if (
+    req.body.password === database.users[0].password &&
+    req.body.email === database.users[0].email
+  ) {
     res.json(database.users[0]);
   } else {
-    res.status(400).json('error loggin in');
+    res.status(400).json("error loggin in");
   }
 });
 
-app.post('/register', (req, res) => {
+app.post("/register", (req, res) => {
   const { email, name, password } = req.body;
-  const newUser = {
-    id: '124',
-    name: name,
-    email: email,
-    entries: 0,
-    joined: new Date()
-  }
-  database.users.push(newUser);
-  res.json(database.users[database.users.length -1]);
-
+  db("users")
+    .returning("*")
+    .insert({
+      name: name,
+      email: email,
+      joined: new Date()
+    })
+    .then(user => res.json(user[0]))
+    .catch(err => res.status(400).json("unable to join"));
 });
 
-app.get('/profile/:id', (req, res) => {
+app.get("/profile/:id", (req, res) => {
   const { id } = req.params;
-  let found = false;
-  database.users.forEach(user => {
-    if (user.id === id) {
-      found = true;
-      return res.json(user);
-    }
-  });
-  if (!found) {
-    res.status(400).json('no such user');
-  }
+  db.select("*")
+    .from("users")
+    .where({ id })
+    .then(user => {
+      if (user.length) {
+        res.json(user[0]);
+      } else {
+        res.status(400).json("no such user");
+      }
+    })
+    .catch(err => res.status(400).json("error getting user"));
 });
 
 app.put("/image", (req, res) => {
@@ -102,9 +102,8 @@ app.put("/image", (req, res) => {
     }
   });
   if (!found) {
-    res.status(400).json('no such user');
+    res.status(400).json("no such user");
   }
-
 });
 
 // bcrypt.hash("bacon", null, null, function (err, hash) {
@@ -119,4 +118,4 @@ app.put("/image", (req, res) => {
 //   // res = false
 // });
 
-app.listen(3000, console.log('server runs'));
+app.listen(3000, console.log("server runs"));
