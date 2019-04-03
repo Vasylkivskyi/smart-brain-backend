@@ -53,27 +53,42 @@ app.get("/", (req, res) => {
 });
 
 app.post("/signin", (req, res) => {
-  if (
-    req.body.password === database.users[0].password &&
-    req.body.email === database.users[0].email
-  ) {
-    res.json(database.users[0]);
-  } else {
-    res.status(400).json("error loggin in");
-  }
+  db.select('email', 'hash').from('login')
+  .where('email', '=', req.body.email)
+  .then(data => console.log(data[0]))
 });
 
 app.post("/register", (req, res) => {
   const { email, name, password } = req.body;
-  db("users")
-    .returning("*")
-    .insert({
-      name: name,
-      email: email,
-      joined: new Date()
-    })
-    .then(user => res.json(user[0]))
-    .catch(err => res.status(400).json("unable to join"));
+  const hash = bcrypt.hashSync(password);
+  // transaction is the thing that makes whole request like one unit.
+  // if where will be an error db will cancel whole request nor a part of it
+    db.transaction(trx => {
+      // trx is the object of knex which will work instead of db in this expression
+      //we insert in login table decripted user email 
+      trx.insert({
+        //hash is our password
+        hash: hash,
+        email: email
+      }).into('login')
+// 71 - 79 ==> all this code id for input encripted password and user email in login table 
+// ufter that we also put that email in users table
+      .returning('email')
+      .then(loginEmail => {
+        return trx("users")
+          .returning("*")
+          .insert({
+            name: name,
+            email: loginEmail[0],
+            joined: new Date()
+          })
+          .then(user => res.json(user[0]))
+          // commit is something like 'save button'
+          .then(trx.commit)
+          // if something goes wrong whole transaction will be rollback
+          .catch(trx.rollback)
+      })
+    }).catch(err => res.status(400).json("unable to join"));
 });
 
 app.get("/profile/:id", (req, res) => {
@@ -93,17 +108,11 @@ app.get("/profile/:id", (req, res) => {
 
 app.put("/image", (req, res) => {
   const { id } = req.body;
-  let found = false;
-  database.users.forEach(user => {
-    if (user.id === id) {
-      found = true;
-      user.entries += 1;
-      return res.json(user.entries);
-    }
-  });
-  if (!found) {
-    res.status(400).json("no such user");
-  }
+    db('users').where('id', '=', id)
+    .increment('entries', 1)
+    .returning('entries')
+    .then(entries => res.json(entries[0]))
+    .catch(err => res.status(400).json('unable to get entries'))
 });
 
 // bcrypt.hash("bacon", null, null, function (err, hash) {
