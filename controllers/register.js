@@ -4,6 +4,11 @@ const handleRegister = (req, res, db, bcrypt) => {
     name,
     password
   } = req.body;
+
+  if (!email || !name || !password) {
+    return res.status(400).json('incorrect form submition');
+  }
+
   const hash = bcrypt.hashSync(password);
   // transaction is the thing that makes whole request like one unit.
   // if where will be an error db will cancel whole request nor a part of it

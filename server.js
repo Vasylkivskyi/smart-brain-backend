@@ -42,4 +42,8 @@ app.put("/image", (req, res) => {
   image.imageHandler(req, res, db)
 });
 
+app.post("/imageurl", (req, res) => {
+  image.handleApiCall(req, res)
+});
+
 app.listen(3000, console.log("server runs"));
