@@ -18,5 +18,5 @@ const profileHandler = (req, res, db) => {
 }
 
 module.exports = {
-  profileHandler: profileHandler 
+  profileHandler: profileHandler
 }
